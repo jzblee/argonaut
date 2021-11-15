@@ -1,0 +1,27 @@
+body {
+    text-align: center;
+}
+
+canvas#c {
+    background-color: #ccc;
+}
+
+.row {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+#viewportContainer {
+    display: flex;
+    position: relative;
+}
+
+#optionsPane {
+    padding: 1rem;
+    background-color: #ccc;
+    text-align: left;
+}
+
+#changelog {
+    text-align: left;
+}
