@@ -8,7 +8,7 @@ let envboxTriangles = [];
 let simOut = null;
 
 let initialState = {
-    tMax: 10,
+    tMax: 20,
     sphere: new Sphere(
         vec3.fromValues(0.0, 0.0, 0.0), // position
         vec3.fromValues(0.0, 0.0, 0.0), // velocity
@@ -395,38 +395,43 @@ function simulate() {
     pl_computeAccelerations(t);
     if (Math.floor((t + h) * fps) > currentSimFrame) {
       // we are on an output frame, print the state
+      // sometimes, the current sim frame will last for multiple output frames;
+      // make sure to fill those or else there will be mismatches in the number
+      // of output frames and the output particle positions
+      // fill missing frames with duplicates of the most recent frame's data
       let newFrame = particlePositions.length;
-      particlePositions.push([]);
-      particleColors.push([]);
-      for (let i = 0; i < numParticles; i++) {
-        if (particles[i].active) {
-          particlePositions[newFrame].push(particles[i].position[0]);
-          particlePositions[newFrame].push(particles[i].position[1]);
-          particlePositions[newFrame].push(particles[i].position[2]);
-          let age = t - particles[i].birth;
-          let lifeProgress = age / particles[i].lifespan;
+      for (let j = newFrame; j <= currentSimFrame; j++) {
+        particlePositions.push([]);
+        particleColors.push([]);
+        for (let i = 0; i < numParticles; i++) {
+          if (particles[i].active) {
+            particlePositions[j].push(particles[i].position[0]);
+            particlePositions[j].push(particles[i].position[1]);
+            particlePositions[j].push(particles[i].position[2]);
+            let age = t - particles[i].birth;
+            let lifeProgress = age / particles[i].lifespan;
 
-          // hasten the fading of the particle colors
-          lifeProgress = Math.sqrt(lifeProgress);
+            // hasten the fading of the particle colors
+            lifeProgress = Math.sqrt(lifeProgress);
 
-          let newColor = simpleGLVec3MixFn(
-            lifeProgress,
-            vec3.fromValues(
-              0.5 * particles[i].initialcolor[0] + 0.5,
-              0.5 * particles[i].initialcolor[1] + 0.5,
-              0.5 * particles[i].initialcolor[2] + 0.5
-            ),
-            vec3.fromValues(0.8, 0.8, 0.8)
-          );
+            let newColor = simpleGLVec3MixFn(
+              lifeProgress,
+              vec3.fromValues(
+                0.5 * particles[i].initialcolor[0] + 0.5,
+                0.5 * particles[i].initialcolor[1] + 0.5,
+                0.5 * particles[i].initialcolor[2] + 0.5
+              ),
+              vec3.fromValues(0.8, 0.8, 0.8)
+            );
 
-          particleColors[newFrame].push(newColor[0]);
-          particleColors[newFrame].push(newColor[1]);
-          particleColors[newFrame].push(newColor[2]);
-          particleColors[newFrame].push(1);
+            particleColors[j].push(newColor[0]);
+            particleColors[j].push(newColor[1]);
+            particleColors[j].push(newColor[2]);
+            particleColors[j].push(1);
 
+          }
         }
       }
-      // console.log(particlePositions);
     }
     pl_integrate(h);
     n = n + 1;

@@ -107,32 +107,38 @@ function popInactiveStack() {
 // a random direction for velocity and a random lifespan between 1
 // and 3 seconds. As particles approach the ends of their lifespans,
 // they fade out
-// EDIT: lifespan is now fixed at 20 seconds to show full particle path
+// NOTE: for orbiting example, the lifespan is fixed at 20 seconds
+// to show full particle path
 function generateParticles(t, h, f) {
   let r = 100; // for now, do 100 as the particle rate
   let n = Math.floor(r * h);
-  // f = f + (r * h - n);
+  // f = f + (r * h - n);  // this would come into play with particle rollover
   f = 0;
   for (let i = 0; i < n; i++) {
     let newParticleIndex = popInactiveStack();
-    particles[newParticleIndex].position = vec3.fromValues(0, 0, 0);
-    particles[newParticleIndex].velocity = generateUniformRandomVector();
-    // if a spawnDir exists, replace the uniform random velocity with...
-    if (particleConfigs[particleConfigIndex].spawnDir) {  // spawn the particles with a velocity in some direction
-      particles[newParticleIndex].velocity = generateUniformRandomVectorInRange(particleConfigs[particleConfigIndex].spawnDir, 2 * Math.PI / 180);
-      vec3.scale(particles[newParticleIndex].velocity, particles[newParticleIndex].velocity, 20);
+    let nP = particles[newParticleIndex];
+    nP.position = vec3.fromValues(0, 0, 0);
+    nP.velocity = generateUniformRandomVector();
+    // if a spawnDir exists, replace the uniform random velocity with a restricted range
+    if (particleConfigs[particleConfigIndex].spawnDir) {  // spawn the particles going in one direction
+      nP.velocity = generateUniformRandomVectorInRange(particleConfigs[particleConfigIndex].spawnDir, 2 * Math.PI / 180);
+      vec3.scale(nP.velocity, nP.velocity, 20);
     } else {
-      vec3.scale(particles[newParticleIndex].velocity, particles[newParticleIndex].velocity, 10);
+      vec3.scale(nP.velocity, nP.velocity, 10);
     }
-    particles[newParticleIndex].acceleration = vec3.fromValues(0, 0, 0);
-    particles[newParticleIndex].birth = t;
-    particles[newParticleIndex].lifespan = particleConfigs[particleConfigIndex].lifespan ?
+    nP.acceleration = vec3.fromValues(0, 0, 0);
+    nP.birth = t;
+    nP.lifespan = particleConfigs[particleConfigIndex].lifespan ?
       particleConfigs[particleConfigIndex].lifespan :
-      1.0 + 2.0 * getUniformRand()
-    // zero out the coefficients for the orbiting demo
-    particles[newParticleIndex].airResistanceCoeff = particleConfigs[particleConfigIndex].airResistanceCoeff;
+      1.0 + 2.0 * getUniformRand();
+    nP.airResistanceCoeff = particleConfigs[particleConfigIndex].airResistanceCoeff;
 
-    particles[newParticleIndex].initialcolor = vec3.clone(particles[newParticleIndex].velocity);
+    nP.initialcolor = vec3.clone(nP.velocity);
+    
+    // make the directed (orbiting) particles blue
+    if (particleConfigs[particleConfigIndex].spawnDir) {
+      nP.initialcolor = vec3.fromValues(0.1, 0.1, 0.9);
+    }
   }
   if (f > 1) {
     n = n + 1;
