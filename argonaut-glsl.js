@@ -1,11 +1,11 @@
 // Argonaut - GLSL portion
 // by Jason Lee
 
-"use strict";
+'use strict'
 
-"use strict";
+/* eslint-disable no-unused-vars */
 
-var vertexShaderSource = `#version 300 es
+const vertexShaderSource = `#version 300 es
 
 // an attribute is an input (in) to a vertex shader.
 // It will receive data from a buffer
@@ -30,9 +30,9 @@ void main() {
   v_color = a_color;
   gl_PointSize = 5.0;
 }
-`;
+`
 
-var vertexShaderSourceOld = `#version 300 es
+const vertexShaderSourceOld = `#version 300 es
 
 // an attribute is an input (in) to a vertex shader.
 // It will receive data from a buffer
@@ -64,9 +64,9 @@ void main() {
   u_position = gl_Position;
   gl_PointSize = 5.0;
 }
-`;
+`
 
-var fragmentShaderSource = `#version 300 es
+const fragmentShaderSource = `#version 300 es
 
 // fragment shaders don't have a default precision so we need
 // to pick one. highp is a good default. It means "high precision"
@@ -86,4 +86,4 @@ void main() {
 
   outColor = v_color;
 }
-`;
+`

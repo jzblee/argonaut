@@ -1,62 +1,59 @@
 // Argonaut - Types portion
 // by Jason Lee
 
-"use strict";
+'use strict'
+
+/* global vec3 */
+/* eslint-disable no-unused-vars */
 
 /*
  * I lifted several object schemas from the types class and simplified
  * them for this first exercise
  */
-function Sphere(position, velocity, acceleration, radius)
-{
-  this.position = position;
-  this.velocity = velocity;
-  this.acceleration = acceleration;
-  this.radius = radius;
+function Sphere (position, velocity, acceleration, radius) {
+  this.position = position
+  this.velocity = velocity
+  this.acceleration = acceleration
+  this.radius = radius
 }
 
-function Plane(p_i, n_i)
-{
-  this.p_i = p_i;
-  this.n_i = n_i;
+function Plane (pI, nI) {
+  this.pI = pI
+  this.nI = nI
 }
 
-function Line(p_0, p_1, isInfinite)
-{
-  this.p_0 = p_0;
-  this.p_1 = p_1;
-  this.isInfinite = isInfinite;
+function Line (p0, p1, isInfinite) {
+  this.p0 = p0
+  this.p1 = p1
+  this.isInfinite = isInfinite
 }
 
-function PointAttractor(point, mass, power)
-{
-  this.point = point;
-  this.mass = mass;
-  this.power = power;
+function PointAttractor (point, mass, power) {
+  this.point = point
+  this.mass = mass
+  this.power = power
 }
 
-function LineAttractor(line, mass, power)
-{
-  this.line = line;
-  this.mass = mass;
-  this.power = power;
+function LineAttractor (line, mass, power) {
+  this.line = line
+  this.mass = mass
+  this.power = power
 }
 
-function Triangle(p_0, p_1, p_2)
-{
-  this.p_0 = p_0;
-  this.p_1 = p_1;
-  this.p_2 = p_2;
-  this.n_i = vec3.create();
-  let v_0 = vec3.create();
-  let v_1 = vec3.create();
-  vec3.subtract(v_0, p_1, p_0);
-  vec3.subtract(v_1, p_2, p_0);
-  vec3.cross(this.n_i, v_0, v_1);
-  vec3.normalize(this.n_i, this.n_i);
-  this.center = vec3.create();
-  vec3.add(this.center, this.center, this.p_0);
-  vec3.add(this.center, this.center, this.p_1);
-  vec3.add(this.center, this.center, this.p_2);
-  vec3.scale(this.center, this.center, 1 / 3);
+function Triangle (p0, p1, p2) {
+  this.p0 = p0
+  this.p1 = p1
+  this.p2 = p2
+  this.nI = vec3.create()
+  const v0 = vec3.create()
+  const v1 = vec3.create()
+  vec3.subtract(v0, p1, p0)
+  vec3.subtract(v1, p2, p0)
+  vec3.cross(this.nI, v0, v1)
+  vec3.normalize(this.nI, this.nI)
+  this.center = vec3.create()
+  vec3.add(this.center, this.center, this.p0)
+  vec3.add(this.center, this.center, this.p1)
+  vec3.add(this.center, this.center, this.p2)
+  vec3.scale(this.center, this.center, 1 / 3)
 };
