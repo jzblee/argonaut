@@ -1,80 +1,90 @@
 <!DOCTYPE html>
 <head>
-<title>Argonaut: Particle simulator</title>
+<title>Argonaut: Physics simulator</title>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous" />
 <link href="style.css" rel="stylesheet" />
 </head>
-<div class="container">
-  <div class="row">
-    <div class="col-md-12">
-      <h2>Particle generation in WebGL</h2>
-    </div>
-  </div>
-  <div class="row">
-    <div class="col-lg-7 col-md-12">
-      <div id="viewportContainer">
-       <canvas width="512" height="512" id="c"></canvas>
-      </div>
-    </div>
-    <div class="col-lg-5 col-md-12">
-      <div id="optionsPane">
-        <h5>Select scene</h5>
-        <div id="configSelector">
-        </div>
+<article>
+  <div class="container">
+    <div class="row">
+      <div class="col-md-12">
         <br>
-        <!--
-        <div class="form-check mt-3">
-          <input class="form-check-input" type="checkbox" value="" id="enableMouseInput" disabled>
-          <label class="form-check-label" for="enableMouseInput">
-            Enable mouse input
-          </label>
-        </div> -->
-        <h5>Configure scene</h5>
-        <div class="form-group mt-3">
-          <label for="windDirection" class="form-label">Wind direction = <span id="windDirectionValue"></span></label>
-          <input type="range" class="form-range" min="-180" max="180" step="1" id="windDirection">
-          <label for="windSpeed" class="form-label">Wind speed = <span id="windSpeedValue"></span></label>
-          <input type="range" class="form-range" min="0" max="100" step="1" id="windSpeed">
+        <a class="backlink" href="../technical-portfolio/">&larr; Technical Portfolio</a>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-12">
+        <h1>Particle generation and RBDs in WebGL</h1>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-lg-7 col-md-12">
+        <div id="viewportContainer">
+         <canvas width="512" height="512" id="c"></canvas>
+        </div>
+      </div>
+      <div class="col-lg-5 col-md-12">
+        <div id="optionsPane">
+          <h5>Select scene</h5>
+          <div id="configSelector">
+          </div>
+          <br>
+          <!--
+          <div class="form-check mt-3">
+            <input class="form-check-input" type="checkbox" value="" id="enableMouseInput" disabled>
+            <label class="form-check-label" for="enableMouseInput">
+              Enable mouse input
+            </label>
+          </div> -->
+          <h5>Configure scene (for particles only)</h5>
+          <div class="form-group mt-3">
+            <label for="windDirection" class="form-label">Wind direction = <span id="windDirectionValue"></span></label>
+            <input type="range" class="form-range" min="-180" max="180" step="1" id="windDirection">
+            <label for="windSpeed" class="form-label">Wind speed = <span id="windSpeedValue"></span></label>
+            <input type="range" class="form-range" min="0" max="100" step="1" id="windSpeed">
 
-          <!-- <label for="trackCameraX" class="form-label">Camera Translate X = <span id="cameraPosXValue"></span></label>
-          <input type="range" class="form-range" min="-5" max="5" step="0.1" id="trackCameraX">
-          <label for="trackCameraY" class="form-label">Camera Translate Y = <span id="cameraPosYValue"></span></label>
-          <input type="range" class="form-range" min="-5" max="5" step="0.1" id="trackCameraY">
-          <label for="trackCameraZ" class="form-label">Camera Translate Z = <span id="cameraPosZValue"></span></label>
-          <input type="range" class="form-range" min="-3.0" max="3.0" step="0.01" id="trackCameraZ">
-          <label for="panCameraX" class="form-label">Camera Rotate X = <span id="cameraRotXValue"></span> degrees</label>
-          <input type="range" class="form-range" min="-5.0" max="5.0" step="0.1" id="panCameraX">
-          <label for="panCameraY" class="form-label">Camera Rotate Y = <span id="cameraRotYValue"></span> degrees</label>
-          <input type="range" class="form-range" min="-5.0" max="5.0" step="0.1" id="panCameraY">
-          <label for="rollCameraZ" class="form-label">Camera Rotate Z = <span id="cameraRotZValue"></span> degrees</label>
-          <input type="range" class="form-range" min="-30.0" max="30.0" step="0.1" id="rollCameraZ">
-          <button type="button" class="btn btn-primary" id="resetCameraControls">Reset camera controls</button>
-          <button type="button" class="btn btn-primary" id="advanceFrame">Advance frame</button> Current frame: <span id="currentFrame"></span> -->
+            <!-- <label for="trackCameraX" class="form-label">Camera Translate X = <span id="cameraPosXValue"></span></label>
+            <input type="range" class="form-range" min="-5" max="5" step="0.1" id="trackCameraX">
+            <label for="trackCameraY" class="form-label">Camera Translate Y = <span id="cameraPosYValue"></span></label>
+            <input type="range" class="form-range" min="-5" max="5" step="0.1" id="trackCameraY">
+            <label for="trackCameraZ" class="form-label">Camera Translate Z = <span id="cameraPosZValue"></span></label>
+            <input type="range" class="form-range" min="-3.0" max="3.0" step="0.01" id="trackCameraZ">
+            <label for="panCameraX" class="form-label">Camera Rotate X = <span id="cameraRotXValue"></span> degrees</label>
+            <input type="range" class="form-range" min="-5.0" max="5.0" step="0.1" id="panCameraX">
+            <label for="panCameraY" class="form-label">Camera Rotate Y = <span id="cameraRotYValue"></span> degrees</label>
+            <input type="range" class="form-range" min="-5.0" max="5.0" step="0.1" id="panCameraY">
+            <label for="rollCameraZ" class="form-label">Camera Rotate Z = <span id="cameraRotZValue"></span> degrees</label>
+            <input type="range" class="form-range" min="-30.0" max="30.0" step="0.1" id="rollCameraZ">
+            <button type="button" class="btn btn-primary" id="resetCameraControls">Reset camera controls</button>
+            <button type="button" class="btn btn-primary" id="advanceFrame">Advance frame</button> Current frame: <span id="currentFrame"></span> -->
 
-          <button type="button" class="btn btn-primary" id="confirmSettings">Confirm settings</button>
+            <button type="button" class="btn btn-primary" id="confirmSettings">Confirm settings</button>
 
-          <!-- <button type="button" class="btn btn-primary" id="restartAnimation">Restart animation</button> -->
+            <!-- <button type="button" class="btn btn-primary" id="restartAnimation">Restart animation</button> -->
+          </div>
         </div>
       </div>
     </div>
-  </div>
-  <div class="row">
-    <div class="col-md-12" id="changelog">
-      <h4>November 15, 2021</h4>
-      <p>Add point attractors and particle system configuration switcher</p>
-      <h4>November 10, 2021</h4>
-      <p>Improve file organization and remove irrelevant code</p>
-      <h4>November 1, 2021</h4>
-      <p>Create online WebGL applet and implement particle generation/wind/air resistance</p>
-      <h4>October 18, 2021</h4>
-      <p>Implement random vector generation</p>
-      <h4>October 4, 2021</h4>
-      <p>Implement bouncing ball with gravity and collision detection</p>
+    <div class="row">
+      <div class="col-md-12" id="changelog">
+        <h4>December 8, 2021</h4>
+        <p>Add single cube/infinite plane RBD simulation with gravity, initial torque, and collision detection</p>
+        <h4>November 15, 2021</h4>
+        <p>Add point attractors and particle system configuration switcher</p>
+        <h4>November 10, 2021</h4>
+        <p>Improve file organization and remove irrelevant code</p>
+        <h4>November 1, 2021</h4>
+        <p>Create online WebGL applet and implement particle generation/wind/air resistance</p>
+        <h4>October 18, 2021</h4>
+        <p>Implement random vector generation</p>
+        <h4>October 4, 2021</h4>
+        <p>Implement bouncing ball with gravity and collision detection</p>
+      </div>
     </div>
   </div>
-</div>
+</article>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>
 <script type="text/javascript" src="gl-matrix-min.js"></script>
 <script type="text/javascript" src="webgl-utils.js"></script>
@@ -86,6 +96,7 @@
 <script type="text/javascript" src="argonaut-particle.js"></script>
 <script type="text/javascript" src="argonaut-mesh.js"></script>
 <script type="text/javascript" src="argonaut-glsl.js"></script>
+<script type="text/javascript" src="argonaut-rigidbody.js"></script>
 <script type="text/javascript" src="argonaut-simulation.js"></script>
 <script type="text/javascript" src="argonaut-dashboard.js"></script>
 <script type="text/javascript" src="argonaut-program.js"></script>

@@ -5,7 +5,10 @@
 
 /* globals Sphere, vec3, Plane, vec2, EPSILON, generateParticles,
 plTestAndDeactivate, plComputeAccelerations, numParticles,
-particles, simpleGLVec3MixFn, plIntegrate */
+particles, simpleGLVec3MixFn, plIntegrate computeRectangularPrisimInertia,
+rbdState, ComputeRigidDerivative, scaleStateVector, addStateVectors, quat,
+rbdCollisionWithPlane, rbdStates, rbdCollisionResponse,
+configSets configIndex, rbdState */
 
 const envboxTriangles = []
 
@@ -327,7 +330,7 @@ function simulate () { /* eslint-disable-line no-unused-vars */
   let n = 0; let t = 0
   let currentSimFrame = 0
   const fps = 40
-  const maxFrame = Math.floor(state.tMax * fps) - 1
+  let maxFrame = Math.floor(state.tMax * fps) - 1
   // TODO: use f
   const f = 0 /* eslint-disable-line no-unused-vars */
 
@@ -386,56 +389,158 @@ function simulate () { /* eslint-disable-line no-unused-vars */
     t = n * h
   } */
 
-  while (t < state.tMax) {
-    // console.log("step " + n);
-    currentSimFrame = Math.floor(t * fps)
-    for (let i = 0; i < 1; i++) { // for each particle generator
-      generateParticles(t, h) // does not keep track of truncation error
-    }
-    plTestAndDeactivate(t)
-    plComputeAccelerations(t)
-    if (Math.floor((t + h) * fps) > currentSimFrame) {
-      // we are on an output frame, print the state
-      // sometimes, the current sim frame will last for multiple output frames;
-      // make sure to fill those or else there will be mismatches in the number
-      // of output frames and the output particle positions
-      // fill missing frames with duplicates of the most recent frame's data
-      const newFrame = particlePositions.length
-      for (let j = newFrame; j <= currentSimFrame; j++) {
-        particlePositions.push([])
-        particleColors.push([])
-        for (let i = 0; i < numParticles; i++) {
-          if (particles[i].active) {
-            particlePositions[j].push(particles[i].position[0])
-            particlePositions[j].push(particles[i].position[1])
-            particlePositions[j].push(particles[i].position[2])
-            const age = t - particles[i].birth
-            let lifeProgress = age / particles[i].lifespan
+  // PARTICLE SIM
 
-            // hasten the fading of the particle colors
-            lifeProgress = Math.sqrt(lifeProgress)
+  if (configSets[configIndex].simType.data === 'particles') {
+    while (t < state.tMax) {
+      // console.log("step " + n);
+      currentSimFrame = Math.floor(t * fps)
+      for (let i = 0; i < 1; i++) { // for each particle generator
+        generateParticles(t, h) // does not keep track of truncation error
+      }
+      plTestAndDeactivate(t)
+      plComputeAccelerations(t)
+      if (Math.floor((t + h) * fps) > currentSimFrame) {
+        // we are on an output frame, print the state
+        // sometimes, the current sim frame will last for multiple output frames;
+        // make sure to fill those or else there will be mismatches in the number
+        // of output frames and the output particle positions
+        // fill missing frames with duplicates of the most recent frame's data
+        const newFrame = particlePositions.length
+        for (let j = newFrame; j <= currentSimFrame; j++) {
+          particlePositions.push([])
+          particleColors.push([])
+          for (let i = 0; i < numParticles; i++) {
+            if (particles[i].active) {
+              particlePositions[j].push(particles[i].position[0])
+              particlePositions[j].push(particles[i].position[1])
+              particlePositions[j].push(particles[i].position[2])
+              const age = t - particles[i].birth
+              let lifeProgress = age / particles[i].lifespan
 
-            const newColor = simpleGLVec3MixFn(
-              lifeProgress,
-              vec3.fromValues(
-                0.5 * particles[i].initialcolor[0] + 0.5,
-                0.5 * particles[i].initialcolor[1] + 0.5,
-                0.5 * particles[i].initialcolor[2] + 0.5
-              ),
-              vec3.fromValues(0.8, 0.8, 0.8)
-            )
+              // hasten the fading of the particle colors
+              lifeProgress = Math.sqrt(lifeProgress)
 
-            particleColors[j].push(newColor[0])
-            particleColors[j].push(newColor[1])
-            particleColors[j].push(newColor[2])
-            particleColors[j].push(1)
+              const newColor = simpleGLVec3MixFn(
+                lifeProgress,
+                vec3.fromValues(
+                  0.5 * particles[i].initialcolor[0] + 0.5,
+                  0.5 * particles[i].initialcolor[1] + 0.5,
+                  0.5 * particles[i].initialcolor[2] + 0.5
+                ),
+                darkModeEnabled ? vec3.fromValues(0.2, 0.2, 0.2) : vec3.fromValues(0.8, 0.8, 0.8)
+              )
+
+              particleColors[j].push(newColor[0])
+              particleColors[j].push(newColor[1])
+              particleColors[j].push(newColor[2])
+              particleColors[j].push(1)
+            }
           }
         }
       }
+      plIntegrate(h)
+      n = n + 1
+      t = n * h
     }
-    plIntegrate(h)
-    n = n + 1
-    t = n * h
+  } else if (configSets[configIndex].simType.data === 'rbd') {
+    const tMax = 5
+    t = 0
+    let tOutput = 0
+
+    const planeNormal = vec3.fromValues(0, 1, 0)
+    const planePoint = vec3.fromValues(0, -25, 0)
+
+    const m = 1
+    const inertia = computeRectangularPrisimInertia(m, 1, 1, 1)
+    maxFrame = Math.floor(tMax * fps) - 1
+
+    while (t < tMax) {
+      let timestepRemaining = h
+      let timestep = timestepRemaining
+      let stepLimit = 100
+
+      let sNew = null
+      const oldState = JSON.parse(JSON.stringify(rbdState))
+      while (timestepRemaining > EPSILON && stepLimit >= 0) {
+        const rbdStateDerivative = ComputeRigidDerivative(rbdState, m, inertia)
+        // console.log(timestepRemaining, timestep, rbdStateDerivative)
+        sNew = scaleStateVector(timestepRemaining, rbdStateDerivative)
+        sNew = addStateVectors(rbdState, sNew)
+        quat.normalize(sNew.q, sNew.q)
+
+        const [f, collisionPoint] = rbdCollisionWithPlane(oldState, sNew, planePoint, planeNormal)
+        if (f < 1.0 - EPSILON) {
+          timestep = f * timestepRemaining - EPSILON
+
+          // console.log('COLLISION')
+          // console.log('COLLISION', t, collisionPoint)
+
+          if (timestep < EPSILON) {
+            timestepRemaining = 0
+            timestep = 0
+            sNew = oldState
+          }
+
+          // if timestep is too small, avoid re-integrating and just move to collision response
+          if (timestep > EPSILON) {
+            sNew = scaleStateVector(timestep, rbdStateDerivative)
+            sNew = addStateVectors(rbdState, sNew)
+            quat.normalize(sNew.q, sNew.q)
+          }
+          // const elasticityCoeff = 0.67
+          // if (Math.abs(sNew.P[1] * elasticityCoeff) > EPSILON) {
+          //   // console.log(sNew.x, sNew.P)
+          //   // sNew.x[1] += 200 * EPSILON
+          //   sNew.P[1] *= -elasticityCoeff // temporary fun! makes the cube fly up
+          // } else {
+          //   sNew.P[1] = 0
+          // }
+          // console.log(sNew)
+          // console.log(rbdStateDerivative)
+          sNew = rbdCollisionResponse(sNew, rbdStateDerivative, collisionPoint, planeNormal, m, inertia)
+          // console.log(sNew)
+          // TODO: RBD collision response!!! replace the momentum bump
+
+          // newState.sphere.position[1] = state.sphere.position[1];
+          // console.log(state.sphere.position[1], newState.sphere.position[1]);
+        }
+        rbdState = sNew
+        timestepRemaining = timestepRemaining - timestep
+        // console.log("timestepRemaining: ", timestepRemaining)
+        stepLimit--
+
+        /*
+        // get the accelerations
+        const acceleration = calculateDerivative(state)
+        // do the integrations
+        let newState = integrateNextStep(state, acceleration, timestepRemaining)
+
+        if (atRest(state)) {
+          console.log('AT REST, ', currentSimFrame)
+          break
+        }
+
+        const f = collisionBetween(state, newState)
+        if (f < 1.0 - EPSILON) {
+          // console.log("COLLISION");
+          // let oldDistance = -1; // TODO: implement this value
+          // let newDistance = -1; // TODO: implement this value
+          // // calculate f to find the exact moment in the timestep of the collision
+          // let deltaDistance = vec3.create();
+          // vec3.add(deltaDistance, oldDistance, -newDistance);
+          // let f = vec3.divide(oldDistance, deltaDistance);
+
+        // console.log(state.sphere)
+        */
+      }
+      if (t > tOutput) {
+        // output frame
+        rbdStates.push(JSON.parse(JSON.stringify(rbdState)))
+        tOutput += 1.0 / fps
+      }
+      t += h
+    }
   }
   return {
     fps: fps,
@@ -443,6 +548,7 @@ function simulate () { /* eslint-disable-line no-unused-vars */
     spherePositions: spherePositions,
     sphereVelocities: sphereVelocities,
     particlePositions: particlePositions,
-    particleColors: particleColors
+    particleColors: particleColors,
+    rbdStates: rbdStates
   }
 }

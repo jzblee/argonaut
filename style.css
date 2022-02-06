@@ -1,5 +1,37 @@
+html {
+  font-size: 100%;
+}
+
 body {
-    text-align: center;
+  font-family: Helvetica, sans-serif;
+  font-weight: 400;
+  background-color: #fcfcfc;
+  color: #222;
+  box-shadow: 0 0 0 5px skyblue inset;
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  -webkit-box-align: center;
+  align-items: center;
+  justify-content: center;
+}
+
+h1 {
+    display: block;
+    font-size: 2em;
+    font-weight: bold;
+    font-size: 1.5em;
+    }
+}
+
+a.backlink:hover {
+  color: skyblue;
+}
+
+a.backlink {
+  color: #419cff;
+  text-decoration: none;
+  text-transform: uppercase;
 }
 
 canvas#c {
@@ -24,4 +56,22 @@ canvas#c {
 
 #changelog {
     text-align: left;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    color: #eee;
+    background: #121212;
+    box-shadow: 0 0 0 5px #365663 inset;
+  }
+  .portfolio-group-desc {
+    color: #aaa;
+  }
+  canvas#c {
+      background-color: #333;
+  }
+
+  #optionsPane {
+      background-color: #333;
+  }
 }

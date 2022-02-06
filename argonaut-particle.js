@@ -15,6 +15,14 @@ let inactiveCount = numParticles
 
 const particleConfigs = [
   {
+    pointAttractors: [],
+    mass: 1.0,
+    airResistanceCoeff: 0.05,
+    lifespan: 0.01,
+    spawnDir: vec3.fromValues(0.0, 1.0, 0.0),
+    gravity: vec3.fromValues(0.0, 0.0, 0.0)
+  },
+  {
     pointAttractors: [
       new PointAttractor(vec3.fromValues(0, 15, 0), 6e13, 2)
     ],

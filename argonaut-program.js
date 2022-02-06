@@ -13,7 +13,7 @@ vertexShaderSource, fragmentShaderSource, initialState,
 vec2, simOut, simulate, requestAnimationFrame,
 generateSphereVertices, generateTriangleFanVertices,
 envboxTriangles, Triangle, generateAllLineVertices,
-mat4 */
+mat4, configIndex, rbdStates, cubeObj */
 
 /* eslint-enable no-unused-vars */
 
@@ -42,6 +42,7 @@ generateConfigSelector()
 function loadConfig () {
   const indexToLoad = document.getElementById('configSelector').value
   if (indexToLoad >= 0 && indexToLoad < configSets.length) {
+    configIndex = indexToLoad
     // find a better way to change config rather than just flipping the particle index
     // may also need to change mesh properties, for example
     particleConfigIndex = configSets[indexToLoad].particleConfigIndex.data
@@ -53,6 +54,7 @@ function loadConfig () {
     plClear()
     destroyExistingCanvas()
     // config = configSets[indexToLoad];
+    // rbdStates = [] // kludge for now, keep the RBD states around and don't delete them to avoid having to regen (just one example right now) TODO
     setUpProgram()
   }
 }
@@ -85,7 +87,7 @@ function setColors (gl, buffer, vertices, setAllZero) {
     )
     vec3.scaleAndAdd(normal, vec3.fromValues(0.5, 0.5, 0.5), normal, 0.5)
     if (setAllZero) {
-      normal = vec3.fromValues(0.0, 0.0, 0.0)
+      normal = darkModeEnabled ? vec3.fromValues(0.9, 0.9, 0.9) : vec3.fromValues(0.1, 0.1, 0.1)
     }
     colors = colors.concat([normal[0], normal[1], normal[2], 1])
     colors = colors.concat([normal[0], normal[1], normal[2], 1])
@@ -201,6 +203,27 @@ function setUpProgram () {
   const particleColorBuffer = gl.createBuffer()
   // color settings are handled in draw loop
 
+  const rbdPositionBuffer = gl.createBuffer()
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, rbdPositionBuffer)
+  const rbdVertices = cubeObj.position
+
+  // console.log(rbdVertices, sphereVertices)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(rbdVertices), gl.STATIC_DRAW)
+
+  const rbdColorBuffer = gl.createBuffer()
+  setColors(gl, rbdColorBuffer, rbdVertices, false)
+
+  const rbdLinesPositionBuffer = gl.createBuffer()
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, rbdLinesPositionBuffer)
+  const rbdLinesVertices = [-200, -25, 0, 200, -25, 0]
+  // console.log(rbdVertices, sphereVertices)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(rbdLinesVertices), gl.STATIC_DRAW)
+
+  const rbdLinesColorBuffer = gl.createBuffer()
+  setColors(gl, rbdLinesColorBuffer, rbdLinesVertices, true)
+
   simOut = simulate()
 
   animCall = requestAnimationFrame(drawScene)
@@ -213,6 +236,8 @@ function setUpProgram () {
 
     const particlePositions = simOut.particlePositions
     const particleColors = simOut.particleColors
+
+    const rbdStates = simOut.rbdStates
 
     now *= 0.001
     const frame = Math.floor(now * fps) % maxFrame
@@ -235,7 +260,18 @@ function setUpProgram () {
     // Tell it to use our program (pair of shaders)
     gl.useProgram(program)
 
-    for (let i = 2; i < 4; i++) { // SKIP ALL BUT PARTICLES FOR NOW
+    let firstVaoIndex = 0
+    let lastVaoIndex = 0
+
+    if (configSets[configIndex].simType.data === 'particles') {
+      firstVaoIndex = 3
+      lastVaoIndex = 3
+    } else if (configSets[configIndex].simType.data === 'rbd') {
+      firstVaoIndex = 4
+      lastVaoIndex = 5
+    }
+
+    for (let i = firstVaoIndex; i <= lastVaoIndex; i++) {
       // Bind the attribute/buffer set we want.
       let vao = null
       let positionBuffer = null
@@ -281,6 +317,24 @@ function setUpProgram () {
           gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer)
           gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(particleColors[frame]), gl.STATIC_DRAW)
           break
+        case 4:
+        // CASE 4: RBD simulation (cube and plane)
+          vao = gl.createVertexArray()
+          positionBuffer = rbdPositionBuffer
+          colorBuffer = rbdColorBuffer
+          // numVertices = rbdPositions[frame].length / 3
+          numVertices = rbdVertices.length / 3
+          primitiveType = gl.TRIANGLES
+          break
+        case 5:
+        // CASE 5: RBD simulation supplemental (plane)
+          vao = gl.createVertexArray()
+          positionBuffer = rbdLinesPositionBuffer
+          colorBuffer = rbdLinesColorBuffer
+          // numVertices = rbdPositions[frame].length / 3
+          numVertices = rbdLinesVertices.length / 3
+          primitiveType = gl.LINES
+          break
         default:
           break
       }
@@ -315,6 +369,13 @@ function setUpProgram () {
       if (i === 0) {
         // let frame = Math.floor(now * fps) % maxFrame;  // moved to top of function
         mat4.translate(matrix, matrix, vec3.fromValues(spherePositions[frame][0], spherePositions[frame][1], spherePositions[frame][2]))
+      }
+      if (i === 4) {
+        // let frame = Math.floor(now * fps) % maxFrame;  // moved to top of function
+        const rotation = mat4.create()
+        mat4.fromQuat(rotation, rbdStates[frame].q)
+        mat4.translate(matrix, matrix, vec3.fromValues(rbdStates[frame].x[0], rbdStates[frame].x[1], rbdStates[frame].x[2]))
+        mat4.multiply(matrix, matrix, rotation)
       }
 
       gl.uniformMatrix4fv(matrixLocation, false, matrix)
