@@ -8,7 +8,7 @@ plTestAndDeactivate, plComputeAccelerations, numParticles,
 particles, simpleGLVec3MixFn, plIntegrate computeRectangularPrisimInertia,
 rbdState, ComputeRigidDerivative, scaleStateVector, addStateVectors, quat,
 rbdCollisionWithPlane, rbdStates, rbdCollisionResponse,
-configSets configIndex, rbdState */
+configSets configIndex, rbdState, rbdCollisionPlaneHeight, rbdCubeS */
 
 const envboxTriangles = []
 
@@ -17,10 +17,10 @@ let simOut = null // eslint-disable-line no-unused-vars, prefer-const
 const initialState = {
   tMax: 20,
   sphere: new Sphere(
-    vec3.fromValues(0.0, 0.0, 0.0), // position
+    vec3.fromValues(1.0, 4.0, 0.0), // position
     vec3.fromValues(0.0, 0.0, 0.0), // velocity
     vec3.fromValues(0.0, -9.81, 0.0), // acceleration
-    2.0 // radius
+    1.0 // radius
   ),
   env: [
     new Plane(
@@ -29,7 +29,7 @@ const initialState = {
     )
   ],
   elasticityCoeff: 0.8,
-  frictionCoeff: 0.5,
+  frictionCoeff: 0.2,
   airResistanceCoeff: 0.5,
   windSpeed: vec2.fromValues(0.0, 0.0), // used to be 0.0, 25.0
   mass: 1.0
@@ -125,6 +125,10 @@ const integrateNextStep = function (oldState, acceleration, timestep) {
   const deltaPosition = vec3.create()
   vec3.scale(deltaPosition, avgVelocityStep1, 0.5 * timestep)
   vec3.add(newState.sphere.position, oldState.sphere.position, deltaPosition)
+  // used to debug errant extra integrations at 40 fps
+  // if (timestep < 0.025) {
+  //   console.log(timestep, deltaVelocity, deltaPosition)
+  // }
   return newState
 }
 
@@ -151,20 +155,26 @@ const collisionResponse = function (state) { /* eslint-disable-line no-unused-va
   // compute elasticity and friction response
   // change the velocity of the object to the new velocity
   const normalForce = getNormalForce(state)
-  const oldVel = state.sphere.velocity
-  const velDir = vec3.create()
-  vec3.normalize(velDir, state.sphere.velocity)
-  console.log('NF-A', normalForce, state.elasticityCoeff, state.sphere.velocity)
-  const coeffs = -state.elasticityCoeff * -vec3.dot(velDir, normalForce)
-  vec3.scale(state.sphere.velocity, state.sphere.velocity, coeffs)
+  const newVel = vec3.create()
+  vec3.add(newVel, newVel, state.sphere.velocity)
+  // console.log('VEL', state.sphere.velocity, oldVel)
+  // console.log('NF-A', { normal: normalForce, elC: state.elasticityCoeff, vel: newVel })
   const normalVel = vec3.create()
-  vec3.scale(normalVel, normalForce, vec3.length(state.sphere.velocity))
+  // console.log('NV1', normalVel)
+  vec3.scale(normalVel, normalForce, vec3.dot(newVel, normalForce))
+  // console.log('NV2', normalVel)
   const tangentVel = vec3.create()
-  console.log('NF-AB', normalVel)
-  vec3.subtract(tangentVel, oldVel, normalVel)
-  // vec3.scale(tangentVel, tangentVel, (1 - state.frictionCoeff));
-  vec3.add(state.sphere.velocity, state.sphere.velocity, tangentVel)
-  console.log('NF-B', normalForce, coeffs, state.sphere.velocity)
+  // console.log('NF-AB', normalVel)
+  vec3.subtract(tangentVel, newVel, normalVel)
+  // this next line used to be above the tangent velocity calculation,
+  // which was wrong! you only attenuate the velocity components
+  // after you separate them. otherwise you would be calculating the
+  // "pre-collision" tangent velocity using the "post-collision"
+  // normal velocity
+  vec3.scale(normalVel, normalVel, -state.elasticityCoeff)
+  vec3.scale(tangentVel, tangentVel, (1 - state.frictionCoeff))
+  vec3.add(state.sphere.velocity, normalVel, tangentVel)
+  // console.log('NF-B', { normal: normalForce, elC: state.elasticityCoeff, newVel: state.sphere.velocity })
 
   // state.sphere.velocity[1] = -state.elasticityCoeff * state.sphere.velocity[1];
   return state
@@ -175,7 +185,7 @@ const getNormalForce = function (state) {
   for (let i = 0; i < envboxTriangles.length; i++) {
     const distance = getDistanceFromTriangle(state.sphere.position, i)
     // console.log(i, distance);
-    if (Math.abs(distance) - state.sphere.radius < 100 * EPSILON) {
+    if (Math.abs(distance) - state.sphere.radius < 2 * EPSILON) {
       contactingTriangles.push(envboxTriangles[i].nI)
     }
   }
@@ -329,69 +339,82 @@ function simulate () { /* eslint-disable-line no-unused-vars */
   const h = 0.025
   let n = 0; let t = 0
   let currentSimFrame = 0
-  const fps = 40
+  const fps = 24
   let maxFrame = Math.floor(state.tMax * fps) - 1
-  // TODO: use f
+  // TODO: use f and to compensate for leftover frames (see textbook)
   const f = 0 /* eslint-disable-line no-unused-vars */
 
-  /* while (t < state.tMax) {
-    // break // DEBUG: skip the sim loop for now
-    console.log('step ' + n)
+  if (configSets[configIndex].simType.data === 'bouncingball') {
+    while (t < state.tMax) {
+      // break // DEBUG: skip the sim loop for now
+      // console.log('step ' + n)
 
-    currentSimFrame = Math.floor(t * fps)
-    for (let i = currentSimFrame; i < Math.floor((t + h) * fps); i++) {
-      spherePositions.push(state.sphere.position)
-      sphereVelocities.push(state.sphere.velocity)
-    }
-
-    let timestepRemaining = h
-    let timestep = timestepRemaining
-    let stepLimit = 100
-    /* while (timestepRemaining > EPSILON && stepLimit >= 0) {
-      // get the accelerations
-      const acceleration = calculateDerivative(state)
-      // do the integrations
-      let newState = integrateNextStep(state, acceleration, timestepRemaining)
-
-      if (atRest(state)) {
-        console.log('AT REST, ', currentSimFrame)
-        break
-      }
-
-      const f = collisionBetween(state, newState)
-      if (f < 1.0 - EPSILON) {
-        // console.log("COLLISION");
-        // let oldDistance = -1; // TODO: implement this value
-        // let newDistance = -1; // TODO: implement this value
-        // // calculate f to find the exact moment in the timestep of the collision
-        // let deltaDistance = vec3.create();
-        // vec3.add(deltaDistance, oldDistance, -newDistance);
-        // let f = vec3.divide(oldDistance, deltaDistance);
-        timestep = f * timestepRemaining - EPSILON
-
-        if (timestep < EPSILON) {
-          break // needed to help avoid big jumps at rest or phasing through planes
+      currentSimFrame = Math.floor(t * fps)
+      const nextSimFrame = Math.floor((t + h + EPSILON) * fps)
+      // console.log(currentSimFrame, nextSimFrame)
+      // if these are equal, don't push anything and wait till the
+      // next timestep to push an output frame
+      if (currentSimFrame !== nextSimFrame) {
+        spherePositions.push(state.sphere.position)
+        sphereVelocities.push(state.sphere.velocity)
+        for (let i = currentSimFrame + 1; i < nextSimFrame; i++) {
+          // console.log('step ' + i, Math.floor((t + h) * fps))
+          spherePositions.push(state.sphere.position)
+          sphereVelocities.push(state.sphere.velocity)
         }
-        // console.log(h - timestepRemaining, timestep);
-        newState = integrateNextStep(state, acceleration, timestep)
-        newState = collisionResponse(newState)
-        // newState.sphere.position[1] = state.sphere.position[1];
-        // console.log(state.sphere.position[1], newState.sphere.position[1]);
       }
-      timestepRemaining = timestepRemaining - timestep
-      // console.log("timestepRemaining: ", timestepRemaining)
-      state = newState
-      stepLimit--
-      // console.log(state.sphere)
+
+      let timestepRemaining = h
+      let timestep = timestepRemaining
+      let stepLimit = 100
+      while (timestepRemaining > EPSILON && stepLimit >= 0) {
+        // get the accelerations
+        const acceleration = calculateDerivative(state)
+        // do the integrations
+        let newState = integrateNextStep(state, acceleration, timestepRemaining)
+
+        if (atRest(state)) {
+          console.log('AT REST, ', currentSimFrame)
+          break
+        }
+
+        const f = collisionBetween(state, newState)
+        if (f < 1.0 - EPSILON) {
+          // console.log("COLLISION");
+          // let oldDistance = -1; // TODO: implement this value
+          // let newDistance = -1; // TODO: implement this value
+          // // calculate f to find the exact moment in the timestep of the collision
+          // let deltaDistance = vec3.create();
+          // vec3.add(deltaDistance, oldDistance, -newDistance);
+          // let f = vec3.divide(oldDistance, deltaDistance);
+          // timestep = f * timestepRemaining - EPSILON
+          timestep = f * timestepRemaining
+
+          if (timestep < EPSILON) {
+            break // needed to help avoid big jumps at rest or phasing through planes
+          }
+          // console.log(h - timestepRemaining, timestep)
+          newState = integrateNextStep(state, acceleration, timestep)
+          newState = collisionResponse(newState)
+          // newState.sphere.position[1] = state.sphere.position[1];
+          // console.log(state.sphere.position[1], newState.sphere.position[1])
+          // console.log(state.sphere.velocity[1], newState.sphere.velocity[1])
+        } else {
+          // if there is no collision, consume the rest of the unused timestep
+          timestep = timestepRemaining
+        }
+        timestepRemaining = timestepRemaining - timestep
+        // console.log('timestepRemaining: ', timestepRemaining)
+        state = newState
+        stepLimit--
+        // console.log(state.sphere)
+      }
+
+      n = n + 1
+      t = n * h
     }
-
-    n = n + 1
-    t = n * h
-  } */
-
-  // PARTICLE SIM
-
-  if (configSets[configIndex].simType.data === 'particles') {
+  } else if (configSets[configIndex].simType.data === 'particles') {
+    // PARTICLE SIM
     while (t < state.tMax) {
       // console.log("step " + n);
       currentSimFrame = Math.floor(t * fps)
@@ -444,15 +467,15 @@ function simulate () { /* eslint-disable-line no-unused-vars */
       t = n * h
     }
   } else if (configSets[configIndex].simType.data === 'rbd') {
-    const tMax = 5
+    const tMax = 10
     t = 0
     let tOutput = 0
 
     const planeNormal = vec3.fromValues(0, 1, 0)
-    const planePoint = vec3.fromValues(0, -25, 0)
+    const planePoint = vec3.fromValues(0, rbdCollisionPlaneHeight, 0)
 
     const m = 1
-    const inertia = computeRectangularPrisimInertia(m, 1, 1, 1)
+    const inertia = computeRectangularPrisimInertia(m, rbdCubeS * 2, rbdCubeS * 2, rbdCubeS * 2)
     maxFrame = Math.floor(tMax * fps) - 1
 
     while (t < tMax) {
@@ -471,7 +494,7 @@ function simulate () { /* eslint-disable-line no-unused-vars */
 
         const [f, collisionPoint] = rbdCollisionWithPlane(oldState, sNew, planePoint, planeNormal)
         if (f < 1.0 - EPSILON) {
-          timestep = f * timestepRemaining - EPSILON
+          timestep = f * timestepRemaining
 
           // console.log('COLLISION')
           // console.log('COLLISION', t, collisionPoint)
@@ -504,6 +527,8 @@ function simulate () { /* eslint-disable-line no-unused-vars */
 
           // newState.sphere.position[1] = state.sphere.position[1];
           // console.log(state.sphere.position[1], newState.sphere.position[1]);
+        } else {
+          timestep = timestepRemaining
         }
         rbdState = sNew
         timestepRemaining = timestepRemaining - timestep

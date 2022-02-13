@@ -50,7 +50,7 @@ function generateBox (x, y, z, rotateY) { // eslint-disable-line no-unused-vars
     const p = vec3.fromValues(vertices[i + 0], vertices[i + 1], vertices[i + 2])
     vec3.rotateY(p, p, vec3.create(), rotateY)
     vec3.rotateX(p, p, vec3.create(), rotateY / 2)
-    // vec3.rotateZ(p, p, vec3.create(), rotateY/4);
+    vec3.rotateZ(p, p, vec3.create(), rotateY / 4)
     vertices[i + 0] = p[0]
     vertices[i + 1] = p[1]
     vertices[i + 2] = p[2]

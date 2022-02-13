@@ -20,6 +20,12 @@ const EPSILON = 0.0005
 
 const configSets = [
   {
+    desc: { type: null, data: 'Bouncing ball' },
+    particleConfigIndex: { type: 'int', data: 0 },
+    simType: { type: 'string', data: 'bouncingball' },
+    initialState: { type: 'object', data: {} }
+  },
+  {
     desc: { type: null, data: 'Falling cube' },
     particleConfigIndex: { type: 'int', data: 0 },
     simType: { type: 'string', data: 'rbd' },

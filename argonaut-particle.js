@@ -24,12 +24,12 @@ const particleConfigs = [
   },
   {
     pointAttractors: [
-      new PointAttractor(vec3.fromValues(0, 15, 0), 6e13, 2)
+      new PointAttractor(vec3.fromValues(0, 3, 0), 4e11, 2)
     ],
-    mass: 1.0,
+    mass: 0.1,
     airResistanceCoeff: 0.05,
     lifespan: 20,
-    spawnDir: vec3.fromValues(-0.7, 1.0, 0.0),
+    spawnDir: vec3.fromValues(-0.07, 0.1, 0.0),
     gravity: vec3.fromValues(0.0, 0.0, 0.0)
   },
   {
@@ -134,9 +134,9 @@ function generateParticles (t, h, f) { // eslint-disable-line no-unused-vars
     // if a spawnDir exists, replace the uniform random velocity with a restricted range
     if (particleConfigs[particleConfigIndex].spawnDir) { // spawn the particles going in one direction
       nP.velocity = generateUniformRandomVectorInRange(particleConfigs[particleConfigIndex].spawnDir, 2 * Math.PI / 180)
-      vec3.scale(nP.velocity, nP.velocity, 20)
+      vec3.scale(nP.velocity, nP.velocity, 4)
     } else {
-      vec3.scale(nP.velocity, nP.velocity, 10)
+      vec3.scale(nP.velocity, nP.velocity, 2)
     }
     nP.acceleration = vec3.fromValues(0, 0, 0)
     nP.birth = t

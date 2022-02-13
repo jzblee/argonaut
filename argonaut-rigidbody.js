@@ -9,106 +9,114 @@
 generateUniformRandomVectorInRange, getUniformRand,
 initialState, EPSILON */
 
+const rbdCubeS = 1.0
+
 const cubeObj = {
   position: [
-    5.7735, 5.7735, 5.7735,
-    -5.7735, 5.7735, 5.7735,
-    5.7735, -5.7735, 5.7735,
-    5.7735, -5.7735, 5.7735,
-    -5.7735, 5.7735, 5.7735,
-    -5.7735, -5.7735, 5.7735,
-    -5.7735, 5.7735, -5.7735,
-    5.7735, 5.7735, -5.7735,
-    -5.7735, -5.7735, -5.7735,
-    -5.7735, -5.7735, -5.7735,
-    5.7735, 5.7735, -5.7735,
-    5.7735, -5.7735, -5.7735,
-    -5.7735, -5.7735, 5.7735,
-    -5.7735, -5.7735, -5.7735,
-    5.7735, -5.7735, 5.7735,
-    5.7735, -5.7735, 5.7735,
-    -5.7735, -5.7735, -5.7735,
-    5.7735, -5.7735, -5.7735,
-    5.7735, 5.7735, 5.7735,
-    5.7735, 5.7735, -5.7735,
-    -5.7735, 5.7735, 5.7735,
-    -5.7735, 5.7735, 5.7735,
-    5.7735, 5.7735, -5.7735,
-    -5.7735, 5.7735, -5.7735,
-    -5.7735, -5.7735, 5.7735,
-    -5.7735, 5.7735, 5.7735,
-    -5.7735, -5.7735, -5.7735,
-    -5.7735, -5.7735, -5.7735,
-    -5.7735, 5.7735, 5.7735,
-    -5.7735, 5.7735, -5.7735,
-    5.7735, -5.7735, 5.7735,
-    5.7735, -5.7735, -5.7735,
-    5.7735, 5.7735, 5.7735,
-    5.7735, 5.7735, 5.7735,
-    5.7735, -5.7735, -5.7735,
-    5.7735, 5.7735, -5.7735
+    rbdCubeS, rbdCubeS, rbdCubeS,
+    -rbdCubeS, rbdCubeS, rbdCubeS,
+    rbdCubeS, -rbdCubeS, rbdCubeS,
+    rbdCubeS, -rbdCubeS, rbdCubeS,
+    -rbdCubeS, rbdCubeS, rbdCubeS,
+    -rbdCubeS, -rbdCubeS, rbdCubeS,
+    -rbdCubeS, rbdCubeS, -rbdCubeS,
+    rbdCubeS, rbdCubeS, -rbdCubeS,
+    -rbdCubeS, -rbdCubeS, -rbdCubeS,
+    -rbdCubeS, -rbdCubeS, -rbdCubeS,
+    rbdCubeS, rbdCubeS, -rbdCubeS,
+    rbdCubeS, -rbdCubeS, -rbdCubeS,
+    -rbdCubeS, -rbdCubeS, rbdCubeS,
+    -rbdCubeS, -rbdCubeS, -rbdCubeS,
+    rbdCubeS, -rbdCubeS, rbdCubeS,
+    rbdCubeS, -rbdCubeS, rbdCubeS,
+    -rbdCubeS, -rbdCubeS, -rbdCubeS,
+    rbdCubeS, -rbdCubeS, -rbdCubeS,
+    rbdCubeS, rbdCubeS, rbdCubeS,
+    rbdCubeS, rbdCubeS, -rbdCubeS,
+    -rbdCubeS, rbdCubeS, rbdCubeS,
+    -rbdCubeS, rbdCubeS, rbdCubeS,
+    rbdCubeS, rbdCubeS, -rbdCubeS,
+    -rbdCubeS, rbdCubeS, -rbdCubeS,
+    -rbdCubeS, -rbdCubeS, rbdCubeS,
+    -rbdCubeS, rbdCubeS, rbdCubeS,
+    -rbdCubeS, -rbdCubeS, -rbdCubeS,
+    -rbdCubeS, -rbdCubeS, -rbdCubeS,
+    -rbdCubeS, rbdCubeS, rbdCubeS,
+    -rbdCubeS, rbdCubeS, -rbdCubeS,
+    rbdCubeS, -rbdCubeS, rbdCubeS,
+    rbdCubeS, -rbdCubeS, -rbdCubeS,
+    rbdCubeS, rbdCubeS, rbdCubeS,
+    rbdCubeS, rbdCubeS, rbdCubeS,
+    rbdCubeS, -rbdCubeS, -rbdCubeS,
+    rbdCubeS, rbdCubeS, -rbdCubeS
   ],
   vertices: [
-    5.7735, 5.7735, 5.7735,
-    -5.7735, 5.7735, 5.7735,
-    5.7735, -5.7735, 5.7735,
-    -5.7735, -5.7735, 5.7735,
-    -5.7735, 5.7735, -5.7735,
-    5.7735, 5.7735, -5.7735,
-    5.7735, -5.7735, -5.7735,
-    -5.7735, -5.7735, -5.7735
+    rbdCubeS, rbdCubeS, rbdCubeS,
+    -rbdCubeS, rbdCubeS, rbdCubeS,
+    rbdCubeS, -rbdCubeS, rbdCubeS,
+    -rbdCubeS, -rbdCubeS, rbdCubeS,
+    -rbdCubeS, rbdCubeS, -rbdCubeS,
+    rbdCubeS, rbdCubeS, -rbdCubeS,
+    rbdCubeS, -rbdCubeS, -rbdCubeS,
+    -rbdCubeS, -rbdCubeS, -rbdCubeS
   ],
-  normal: [
-    0, 0, 1,
-    0, 0, 1,
-    0, 0, 1,
-    0, 0, 1,
-    0, 0, 1,
-    0, 0, 1,
-    0, 0, -1,
-    0, 0, -1,
-    0, 0, -1,
-    0, 0, -1,
-    0, 0, -1,
-    0, 0, -1,
-    0, -1, 0,
-    0, -1, 0,
-    0, -1, 0,
-    0, -1, 0,
-    0, -1, 0,
-    0, -1, 0,
-    0, 1, 0,
-    0, 1, 0,
-    0, 1, 0,
-    0, 1, 0,
-    0, 1, 0,
-    0, 1, 0,
-    -1, 0, 0,
-    -1, 0, 0,
-    -1, 0, 0,
-    -1, 0, 0,
-    -1, 0, 0,
-    -1, 0, 0,
-    1, 0, 0,
-    1, 0, 0,
-    1, 0, 0,
-    1, 0, 0,
-    1, 0, 0,
-    1, 0, 0
-  ],
+  // normal: [
+  //   0, 0, 1,
+  //   0, 0, 1,
+  //   0, 0, 1,
+  //   0, 0, 1,
+  //   0, 0, 1,
+  //   0, 0, 1,
+  //   0, 0, -1,
+  //   0, 0, -1,
+  //   0, 0, -1,
+  //   0, 0, -1,
+  //   0, 0, -1,
+  //   0, 0, -1,
+  //   0, -1, 0,
+  //   0, -1, 0,
+  //   0, -1, 0,
+  //   0, -1, 0,
+  //   0, -1, 0,
+  //   0, -1, 0,
+  //   0, 1, 0,
+  //   0, 1, 0,
+  //   0, 1, 0,
+  //   0, 1, 0,
+  //   0, 1, 0,
+  //   0, 1, 0,
+  //   -1, 0, 0,
+  //   -1, 0, 0,
+  //   -1, 0, 0,
+  //   -1, 0, 0,
+  //   -1, 0, 0,
+  //   -1, 0, 0,
+  //   1, 0, 0,
+  //   1, 0, 0,
+  //   1, 0, 0,
+  //   1, 0, 0,
+  //   1, 0, 0,
+  //   1, 0, 0
+  // ],
   color: { value: [1, 1, 1, 1] }
 }
 
 let rbdStates = []
 
 let rbdState = {
-  x: vec3.fromValues(0, 0, 0), // position
+  x: vec3.fromValues(0, 4, 0), // position
   P: vec3.fromValues(0, 0, 0), // linear momentum
   L: vec3.fromValues(0, 0, 0), // angular momentum
-  q: quat.fromValues(0, 1, 0, 0) // rotation
+  q: quat.fromValues(0, 0, 0, 0) // rotation
 }
 
+// generate a random starting rotation
+rbdState.q = quat.fromValues(getUniformRand(), getUniformRand(), getUniformRand(), getUniformRand())
+quat.normalize(rbdState.q, rbdState.q)
+
 let rbdOnInitialFrame = true
+
+const rbdCollisionPlaneHeight = -3
 
 const forces = [
   {
@@ -117,8 +125,9 @@ const forces = [
     initialOnly: false
   },
   {
-    vector: vec3.fromValues(3, -50, 12),
-    p: vec3.fromValues(5.7735, 5.7735, 5.7735),
+    vector: vec3.fromValues(0, -10, 2),
+    // vector: vec3.fromValues(0, 0, 0),
+    p: vec3.fromValues(rbdCubeS, rbdCubeS, rbdCubeS),
     initialOnly: true
   }
   // each force has a direction
@@ -249,13 +258,13 @@ function RigidMotion () {
   // initialize a bunch of states
   // S, S_new, S-dot
 
-  const tMax = 10
+  const tMax = 30
   let t = 0
   const h = 0.05
   let tOutput = 0
 
   const m = 1
-  const inertia = computeRectangularPrisimInertia(m, 1, 1, 1)
+  const inertia = computeRectangularPrisimInertia(m, rbdCubeS * 2, rbdCubeS * 2, rbdCubeS * 2)
 
   // Initialize state (from initial state), mass, moment of inertia
 
