@@ -6,10 +6,6 @@
 /* global vec3 */
 /* eslint-disable no-unused-vars */
 
-/*
- * I lifted several object schemas from the types class and simplified
- * them for this first exercise
- */
 function Sphere (position, velocity, acceleration, radius) {
   this.position = position
   this.velocity = velocity
