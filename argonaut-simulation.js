@@ -36,15 +36,10 @@ const initialState = {
 }
 
 /*
-This file contains the timestep handler. Depends on gl-matrix-min.js for vector functionality.
+This file contains the timestep handler and collision response for
+a bouncing ball. Depends on gl-matrix-min.js for vector functionality.
 
-TODO: load initial state; collision detection, multiple object collision detection,
-      polygon representation, polygon collisions, collision response
-
-Existing hookable components:
-Scene configuration files
-Bootstrap interface integration
-Image sequence exporter
+TODO: multiple sphere collision detection and response
 */
 
 const isInTriangle = function (p, p0, p1, p2) {
@@ -97,9 +92,9 @@ const calculateDistanceFromPlane = function (p, pI, nI) {
 
 const calculateDerivative = function (state) { /* eslint-disable-line no-unused-vars */
   // calculate, collect sum of forces (e.g. gravity, wind, air resistance, etc)
-  // for now, just use acceleration due to gravity
-  // for air resistance, keep in mind the current velocity
-
+  
+  // TODO: add air resistance
+  // For air resistance, keep in mind the current velocity
   // let airResistanceIntermed = -state.airResistanceCoeff * vec3.length(state.sphere.velocity);
   // let airResistance = vec3.scale(state.sphere.velocity, airResistanceIntermed);
   const normalForce = getNormalForce(state)
@@ -108,6 +103,7 @@ const calculateDerivative = function (state) { /* eslint-disable-line no-unused-
   // const normalVel = vec3.create()
   // vec3.scale(normalVel, normalForce, vec3.length(state.sphere.velocity));
 
+  // For now, the only constant force we are considering is from gravity
   return vec3.fromValues(0.0, -9.81, 0.0)
 }
 
@@ -116,6 +112,30 @@ const integrateNextStep = function (oldState, acceleration, timestep) {
   /* eslint-enable no-unused-vars */
   // Clone the old state using JSON tools to preserve a copy
   const newState = JSON.parse(JSON.stringify(oldState))
+  newState.sphere.acceleration = acceleration
+  const deltaVelocity = vec3.create()
+  vec3.scale(deltaVelocity, oldState.sphere.acceleration, timestep)
+  vec3.add(newState.sphere.velocity, oldState.sphere.velocity, deltaVelocity)
+  const avgVelocityStep1 = vec3.create()
+  vec3.add(avgVelocityStep1, oldState.sphere.velocity, newState.sphere.velocity)
+  const deltaPosition = vec3.create()
+  vec3.scale(deltaPosition, avgVelocityStep1, 0.5 * timestep)
+  vec3.add(newState.sphere.position, oldState.sphere.position, deltaPosition)
+  return newState
+}
+
+// Work in progress, implementing 4th order Runge-Kutta integration
+/* eslint-disable no-unused-vars */
+const integrateNextStepRK = function (oldState, acceleration, timestep) {
+  /* eslint-enable no-unused-vars */
+  // Clone the old state using JSON tools to preserve a copy
+  const newState = JSON.parse(JSON.stringify(oldState))
+
+  const k1 = newState.sphere.velocity
+
+  const k2 = newState.sphere.velocity
+  // WORK IN PROGRESS, IMPLEMENT RK
+
   newState.sphere.acceleration = acceleration
   const deltaVelocity = vec3.create()
   vec3.scale(deltaVelocity, oldState.sphere.acceleration, timestep)
@@ -145,9 +165,6 @@ const getDistanceFromTriangle = function (point, triangleIndex) {
   return vec3.dot(projection, tri.nI) / vec3.dot(tri.nI, tri.nI)
 }
 
-/*
- * TODO
- */
 const collisionResponse = function (state) { /* eslint-disable-line no-unused-vars */
   // given the time and location of the collision, generate the correct collision
   // response given the elasticity and friction coefficients
@@ -164,19 +181,16 @@ const collisionResponse = function (state) { /* eslint-disable-line no-unused-va
   vec3.scale(normalVel, normalForce, vec3.dot(newVel, normalForce))
   // console.log('NV2', normalVel)
   const tangentVel = vec3.create()
-  // console.log('NF-AB', normalVel)
   vec3.subtract(tangentVel, newVel, normalVel)
-  // this next line used to be above the tangent velocity calculation,
-  // which was wrong! you only attenuate the velocity components
-  // after you separate them. otherwise you would be calculating the
+  // This next line used to be above the tangent velocity calculation,
+  // which is incorrect; only attenuate the velocity components
+  // after separating them. otherwise we would be calculating the
   // "pre-collision" tangent velocity using the "post-collision"
   // normal velocity
   vec3.scale(normalVel, normalVel, -state.elasticityCoeff)
   vec3.scale(tangentVel, tangentVel, (1 - state.frictionCoeff))
   vec3.add(state.sphere.velocity, normalVel, tangentVel)
   // console.log('NF-B', { normal: normalForce, elC: state.elasticityCoeff, newVel: state.sphere.velocity })
-
-  // state.sphere.velocity[1] = -state.elasticityCoeff * state.sphere.velocity[1];
   return state
 }
 
@@ -184,7 +198,6 @@ const getNormalForce = function (state) {
   const contactingTriangles = []
   for (let i = 0; i < envboxTriangles.length; i++) {
     const distance = getDistanceFromTriangle(state.sphere.position, i)
-    // console.log(i, distance);
     if (Math.abs(distance) - state.sphere.radius < 2 * EPSILON) {
       contactingTriangles.push(envboxTriangles[i].nI)
     }
@@ -197,9 +210,6 @@ const getNormalForce = function (state) {
   return triangleNormalSum
 }
 
-/*
- * TODO
- */
 const atRest = function (state) { /* eslint-disable-line no-unused-vars */
   // is the velocity less than vel-epsilon?
   // is the distance to some plane less than pl-epsilon?
@@ -242,9 +252,6 @@ const atRest = function (state) { /* eslint-disable-line no-unused-vars */
   return true
 }
 
-/*
- * TODO
- */
 const collisionBetween = function (oldState, newState) { /* eslint-disable-line no-unused-vars */
   // dot oldState.sphere.position with oldState.plane.position (adjust for radius)
   // check for sign flips
@@ -262,7 +269,7 @@ const collisionBetween = function (oldState, newState) { /* eslint-disable-line 
   // CORNER CASE: what if the sphere hits more than one plane/polygon at EXACT same time?
   // solution: create an array of all the collisions that occur during this instant. However,
   // unless you have lots and lots of objects, accounting for this corner case will be a
-  // big waste of time
+  // much lower priority
 
   // to give the if condition in the main simulation a hint, have the collision
   // determiner return an integer: -1 if no collisions, 0 or above if there is one,
@@ -346,7 +353,6 @@ function simulate () { /* eslint-disable-line no-unused-vars */
 
   if (configSets[configIndex].simType.data === 'bouncingball') {
     while (t < state.tMax) {
-      // break // DEBUG: skip the sim loop for now
       // console.log('step ' + n)
 
       currentSimFrame = Math.floor(t * fps)
@@ -381,13 +387,6 @@ function simulate () { /* eslint-disable-line no-unused-vars */
         const f = collisionBetween(state, newState)
         if (f < 1.0 - EPSILON) {
           // console.log("COLLISION");
-          // let oldDistance = -1; // TODO: implement this value
-          // let newDistance = -1; // TODO: implement this value
-          // // calculate f to find the exact moment in the timestep of the collision
-          // let deltaDistance = vec3.create();
-          // vec3.add(deltaDistance, oldDistance, -newDistance);
-          // let f = vec3.divide(oldDistance, deltaDistance);
-          // timestep = f * timestepRemaining - EPSILON
           timestep = f * timestepRemaining
 
           if (timestep < EPSILON) {
@@ -396,7 +395,6 @@ function simulate () { /* eslint-disable-line no-unused-vars */
           // console.log(h - timestepRemaining, timestep)
           newState = integrateNextStep(state, acceleration, timestep)
           newState = collisionResponse(newState)
-          // newState.sphere.position[1] = state.sphere.position[1];
           // console.log(state.sphere.position[1], newState.sphere.position[1])
           // console.log(state.sphere.velocity[1], newState.sphere.velocity[1])
         } else {
@@ -511,22 +509,8 @@ function simulate () { /* eslint-disable-line no-unused-vars */
             sNew = addStateVectors(rbdState, sNew)
             quat.normalize(sNew.q, sNew.q)
           }
-          // const elasticityCoeff = 0.67
-          // if (Math.abs(sNew.P[1] * elasticityCoeff) > EPSILON) {
-          //   // console.log(sNew.x, sNew.P)
-          //   // sNew.x[1] += 200 * EPSILON
-          //   sNew.P[1] *= -elasticityCoeff // temporary fun! makes the cube fly up
-          // } else {
-          //   sNew.P[1] = 0
-          // }
-          // console.log(sNew)
-          // console.log(rbdStateDerivative)
-          sNew = rbdCollisionResponse(sNew, rbdStateDerivative, collisionPoint, planeNormal, m, inertia)
-          // console.log(sNew)
-          // TODO: RBD collision response!!! replace the momentum bump
 
-          // newState.sphere.position[1] = state.sphere.position[1];
-          // console.log(state.sphere.position[1], newState.sphere.position[1]);
+          sNew = rbdCollisionResponse(sNew, rbdStateDerivative, collisionPoint, planeNormal, m, inertia)
         } else {
           timestep = timestepRemaining
         }
@@ -534,30 +518,6 @@ function simulate () { /* eslint-disable-line no-unused-vars */
         timestepRemaining = timestepRemaining - timestep
         // console.log("timestepRemaining: ", timestepRemaining)
         stepLimit--
-
-        /*
-        // get the accelerations
-        const acceleration = calculateDerivative(state)
-        // do the integrations
-        let newState = integrateNextStep(state, acceleration, timestepRemaining)
-
-        if (atRest(state)) {
-          console.log('AT REST, ', currentSimFrame)
-          break
-        }
-
-        const f = collisionBetween(state, newState)
-        if (f < 1.0 - EPSILON) {
-          // console.log("COLLISION");
-          // let oldDistance = -1; // TODO: implement this value
-          // let newDistance = -1; // TODO: implement this value
-          // // calculate f to find the exact moment in the timestep of the collision
-          // let deltaDistance = vec3.create();
-          // vec3.add(deltaDistance, oldDistance, -newDistance);
-          // let f = vec3.divide(oldDistance, deltaDistance);
-
-        // console.log(state.sphere)
-        */
       }
       if (t > tOutput) {
         // output frame

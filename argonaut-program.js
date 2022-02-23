@@ -17,6 +17,8 @@ mat4, configIndex, rbdStates, cubeObj, rbdCollisionPlaneHeight */
 
 /* eslint-enable no-unused-vars */
 
+// animCall depends on the return value of requestAnimationFrame
+// this value should not be depended upon
 let animCall = -1
 
 // Get the list of configurations and update the dashboard's select item
@@ -45,13 +47,21 @@ generateConfigSelector()
 function loadConfig () {
   const indexToLoad = document.getElementById('configSelector').value
   if (indexToLoad >= 0 && indexToLoad < configSets.length) {
+    //
+    // This function has room for improvement:
+    //
+    // - particleConfigIndex is a global variable that is
+    //   created in another file
+    // - mesh properties might need to be changed when config
+    //   is changed, properly encapsulate these
+    // - line and particle buffers need to be cleared out
+    //   manually at the moment, and they are not done the same way
+    //   (plClear versus clearing the lines array)
+    // - generatePattCrosses() removes all previously drawn lines
+    //
     configIndex = indexToLoad
-    // find a better way to change config rather than just flipping the particle index
-    // may also need to change mesh properties, for example
     particleConfigIndex = configSets[indexToLoad].particleConfigIndex.data
 
-    // these lines are temporary - need to clear out the line buffer and particle buffer
-    // when swapping configs. find a better way to do this
     lines = []
     generatePattCrosses() // will clear out all the other preset lines! needs fix
     plClear()
@@ -172,10 +182,12 @@ function setUpProgram () {
   const envboxPositionBuffer = gl.createBuffer()
 
   gl.bindBuffer(gl.ARRAY_BUFFER, envboxPositionBuffer)
-  // kludge fix for the time being to generate the disc using the envbox buffer
+
+  // As a test, generate a disc mesh and use the envbox buffer to render it
   // const envboxVertices = generateTriangleFanVertices(vec3.fromValues(0, 0, 0), vec3.fromValues(0, 0, -1), 24.0, 32)
+
+  // Generate a slightly askew 3D box
   let envboxVertices = generateBox(5, 5, 2.5, Math.PI / 4)
-  // let envboxVertices = generateBox(5, 2.5, 2.5, 0)
   for (let i = 0; i < envboxVertices.length; i += 9) {
     envboxTriangles.push(new Triangle(
       vec3.fromValues(envboxVertices[i], envboxVertices[i + 1], envboxVertices[i + 2]),
@@ -211,7 +223,6 @@ function setUpProgram () {
   gl.bindBuffer(gl.ARRAY_BUFFER, rbdPositionBuffer)
   const rbdVertices = cubeObj.position
 
-  // console.log(rbdVertices, sphereVertices)
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(rbdVertices), gl.STATIC_DRAW)
 
   const rbdColorBuffer = gl.createBuffer()
@@ -221,7 +232,6 @@ function setUpProgram () {
 
   gl.bindBuffer(gl.ARRAY_BUFFER, rbdLinesPositionBuffer)
   const rbdLinesVertices = [-40, rbdCollisionPlaneHeight, 0, 40, rbdCollisionPlaneHeight, 0]
-  // console.log(rbdVertices, sphereVertices)
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(rbdLinesVertices), gl.STATIC_DRAW)
 
   const rbdLinesColorBuffer = gl.createBuffer()
@@ -244,7 +254,6 @@ function setUpProgram () {
 
     now *= 0.001
     const frame = Math.floor(now * fps) % maxFrame
-    // console.log(frame, particlePositions[frame]);
     webglUtils.resizeCanvasToDisplaySize(gl.canvas)
 
     // Tell WebGL how to convert from clip space to pixels
@@ -266,6 +275,7 @@ function setUpProgram () {
     let firstVaoIndex = 0
     let lastVaoIndex = 0
 
+    // Condition based on simType as to which VAOs to use
     if (configSets[configIndex].simType.data === 'bouncingball') {
       firstVaoIndex = 0
       lastVaoIndex = 1
@@ -286,7 +296,7 @@ function setUpProgram () {
       let primitiveType = null
       switch (i) {
         case 0:
-        // CASE 0: bouncing sphere (gravity simulation and collisions)
+        // VAO 0: bouncing sphere (gravity simulation and collisions)
           vao = gl.createVertexArray()
           positionBuffer = spherePositionBuffer
           colorBuffer = sphereColorBuffer
@@ -294,7 +304,7 @@ function setUpProgram () {
           primitiveType = gl.TRIANGLES
           break
         case 1:
-        // CASE 1: environment box (collisions)
+        // VAO 1: environment box (collisions)
           vao = gl.createVertexArray()
           positionBuffer = envboxPositionBuffer
           colorBuffer = envboxColorBuffer
@@ -302,7 +312,7 @@ function setUpProgram () {
           primitiveType = gl.TRIANGLES
           break
         case 2:
-        // CASE 2: line visualization (point trails or particle choreography)
+        // VAO 2: line visualization (point trails or particle choreography)
           vao = gl.createVertexArray()
           positionBuffer = linePositionBuffer
           colorBuffer = lineColorBuffer
@@ -310,7 +320,7 @@ function setUpProgram () {
           primitiveType = gl.LINES
           break
         case 3:
-        // CASE 3: particle simulation (gravity, wind, air resistance)
+        // VAO 3: particle simulation (gravity, wind, air resistance)
           vao = gl.createVertexArray()
           positionBuffer = particlePositionBuffer
           colorBuffer = particleColorBuffer
@@ -324,20 +334,18 @@ function setUpProgram () {
           gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(particleColors[frame]), gl.STATIC_DRAW)
           break
         case 4:
-        // CASE 4: RBD simulation (cube and plane)
+        // VAO 4: RBD simulation (cube and plane)
           vao = gl.createVertexArray()
           positionBuffer = rbdPositionBuffer
           colorBuffer = rbdColorBuffer
-          // numVertices = rbdPositions[frame].length / 3
           numVertices = rbdVertices.length / 3
           primitiveType = gl.TRIANGLES
           break
         case 5:
-        // CASE 5: RBD simulation supplemental (plane)
+        // VAO 5: RBD simulation supplemental (plane)
           vao = gl.createVertexArray()
           positionBuffer = rbdLinesPositionBuffer
           colorBuffer = rbdLinesColorBuffer
-          // numVertices = rbdPositions[frame].length / 3
           numVertices = rbdLinesVertices.length / 3
           primitiveType = gl.LINES
           break
@@ -373,11 +381,9 @@ function setUpProgram () {
         -gl.canvas.clientHeight / 50, gl.canvas.clientHeight / 50,
         -gl.canvas.clientWidth / 50, gl.canvas.clientWidth / 50)
       if (i === 0) {
-        // let frame = Math.floor(now * fps) % maxFrame;  // moved to top of function
         mat4.translate(matrix, matrix, vec3.fromValues(spherePositions[frame][0], spherePositions[frame][1], spherePositions[frame][2]))
       }
       if (i === 4) {
-        // let frame = Math.floor(now * fps) % maxFrame;  // moved to top of function
         const rotation = mat4.create()
         mat4.fromQuat(rotation, rbdStates[frame].q)
         mat4.translate(matrix, matrix, vec3.fromValues(rbdStates[frame].x[0], rbdStates[frame].x[1], rbdStates[frame].x[2]))
@@ -386,7 +392,6 @@ function setUpProgram () {
 
       gl.uniformMatrix4fv(matrixLocation, false, matrix)
 
-      // var primitiveType = i == 2 ? gl.LINES : gl.TRIANGLES;
       offset = 0
       const count = numVertices
       gl.drawArrays(primitiveType, offset, count)

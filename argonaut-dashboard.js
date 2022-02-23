@@ -56,8 +56,6 @@ function confirmSettings () {
   const windSpeedX = speed * Math.cos(degrees * Math.PI / 180)
   const windSpeedY = speed * Math.sin(degrees * Math.PI / 180)
 
-  // console.log(degrees, windSpeedX, windSpeedY);
-
   document.querySelector('#c').dispatchEvent(
     new CustomEvent('confirmSettings', {
       detail: { windSpeedX: windSpeedX, windSpeedY: windSpeedY }, bubbles: true

@@ -21,6 +21,7 @@ function randomGaussian () {
   return num
 }
 
+// Create random number tables of fixed length to lower overhead
 function initRandTables () {
   for (let i = 0; i < 5000; i++) {
     uniformRandTable.push(Math.random())
@@ -42,6 +43,8 @@ function getGaussianRand () { // eslint-disable-line no-unused-vars
   return gaussianRandTable[temp]
 }
 
+// Generates 100 random vectors, convert them to lines
+// that start at the origin and return an array of vertices
 function generateUniformRandomVectorDemo (w, range) { // eslint-disable-line no-unused-vars
   const vtx = []
   for (let i = 0; i < 100; i++) {
@@ -59,6 +62,8 @@ function generateUniformRandomVectorDemo (w, range) { // eslint-disable-line no-
   return vtx
 }
 
+// Generates, from uniform distribution, a vector pointing
+// in a random direction
 function generateUniformRandomVector () { // eslint-disable-line no-unused-vars
   const y = getUniformRand() * 2 - 1
   const theta = getUniformRand() * 2 * Math.PI - Math.PI
@@ -67,6 +72,8 @@ function generateUniformRandomVector () { // eslint-disable-line no-unused-vars
   return v
 }
 
+// The range is the maximum angle at which a uniformly
+// generated vector will deviate from w
 function generateUniformRandomVectorInRange (w, range) { // eslint-disable-line no-unused-vars
   const f = getUniformRand()
   const phi = Math.sqrt(f) * range

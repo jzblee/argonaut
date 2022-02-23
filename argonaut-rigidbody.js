@@ -3,11 +3,7 @@
 
 'use strict'
 
-// These globals are holdovers from the particle file, fill them in
-// with the correct ones later
-/* global quat, mat3, vec3, generateUniformRandomVector
-generateUniformRandomVectorInRange, getUniformRand,
-initialState, EPSILON */
+/* global quat, mat3, vec3, mat4, getUniformRand, EPSILON */
 
 const rbdCubeS = 1.0
 
@@ -60,44 +56,6 @@ const cubeObj = {
     rbdCubeS, -rbdCubeS, -rbdCubeS,
     -rbdCubeS, -rbdCubeS, -rbdCubeS
   ],
-  // normal: [
-  //   0, 0, 1,
-  //   0, 0, 1,
-  //   0, 0, 1,
-  //   0, 0, 1,
-  //   0, 0, 1,
-  //   0, 0, 1,
-  //   0, 0, -1,
-  //   0, 0, -1,
-  //   0, 0, -1,
-  //   0, 0, -1,
-  //   0, 0, -1,
-  //   0, 0, -1,
-  //   0, -1, 0,
-  //   0, -1, 0,
-  //   0, -1, 0,
-  //   0, -1, 0,
-  //   0, -1, 0,
-  //   0, -1, 0,
-  //   0, 1, 0,
-  //   0, 1, 0,
-  //   0, 1, 0,
-  //   0, 1, 0,
-  //   0, 1, 0,
-  //   0, 1, 0,
-  //   -1, 0, 0,
-  //   -1, 0, 0,
-  //   -1, 0, 0,
-  //   -1, 0, 0,
-  //   -1, 0, 0,
-  //   -1, 0, 0,
-  //   1, 0, 0,
-  //   1, 0, 0,
-  //   1, 0, 0,
-  //   1, 0, 0,
-  //   1, 0, 0,
-  //   1, 0, 0
-  // ],
   color: { value: [1, 1, 1, 1] }
 }
 
@@ -136,10 +94,10 @@ const forces = [
   // in the future, it should also have an id of the object it affects
 ]
 
-// NEEDS:
-// READ about quaternions
-// READ about multiple body collisions
-// READ about spatial data structures
+// Further reading (and review):
+// - quaternions
+// - multiple body collisions
+// - spatial data structures (octrees/kd-trees)
 
 function computeRectangularPrisimInertia (mass, length, width, height) {
   return mat3.fromValues(
@@ -149,10 +107,9 @@ function computeRectangularPrisimInertia (mass, length, width, height) {
   )
 }
 
-// Description of the RBD integration algorithm:
+// Description of the RBD integration algorithm (House, Keyser):
 
 // State ComputeRigidDerivative(State S, float m, mat3 inverseInertialMatrixLocal)
-
 // State = {x, P, L, q}
 
 // inertia parameter is the inverse of the moment of inertia in the body coordinate system
@@ -225,9 +182,8 @@ function ComputeRigidDerivative (state, m, inertia) {
 }
 
 function addStateVectors (s1, s2) {
-  // Making sure to only act on a copy of the state variabl
-  // solved a bug that I spent hours on
-  // it feels great to fix though!
+  // Clone the state variable to prevent the old state from
+  // being updated
   const newState = JSON.parse(JSON.stringify(s1))
   for (const key in s1) {
     if (key === 'q') {
@@ -240,9 +196,8 @@ function addStateVectors (s1, s2) {
 }
 
 function scaleStateVector (scalar, state) {
-  // Making sure to only act on a copy of the state variabl
-  // solved a bug that I spent hours on
-  // it feels great to fix though!
+  // Clone the state variable to prevent the old state from
+  // being updated
   const newState = JSON.parse(JSON.stringify(state))
   for (const key in state) {
     if (key === 'q') {
@@ -256,6 +211,7 @@ function scaleStateVector (scalar, state) {
 
 function RigidMotion () {
   // initialize a bunch of states
+  // S-dot is the derivative of the current state
   // S, S_new, S-dot
 
   const tMax = 30
@@ -281,16 +237,6 @@ function RigidMotion () {
     rbdState = sNew
     t += h
   }
-
-  // while t is less than tMax
-  //  compute the S-dot using the above function
-  //  S_new = S + S-dot * h
-  //  Normalize(S_new.q)
-  // if t is bigger than tOutput
-  //  display the frame
-  //  bump the time for the next output
-  // S = S_new
-  // t += h
 }
 
 function getDistanceFromPlane(pointToCheck, pointOnPlane, planeNormal) {
@@ -325,8 +271,6 @@ function rbdCollisionWithPlane (oldState, newState, planePoint, planeNormal) {
   const oldStateVertices = computeRBDVertices(oldState)
   const newStateVertices = computeRBDVertices(newState)
 
-  // console.log(oldStateVertices, newStateVertices)
-
   let collisionPoint = null
 
   for (let i = 0; i < oldStateVertices.length; i++) {
@@ -335,8 +279,6 @@ function rbdCollisionWithPlane (oldState, newState, planePoint, planeNormal) {
     // determine where on plane the point coliision happened
     // determine exactly when the collision happened
     // determine if collision was within the bounds of triangle (barycentric)
-    // console.log(i, oldDistance - oldState.sphere.radius, newDistance - oldState.sphere.radius);
-    // console.log(oldDistance, newDistance)
     if (
       (oldDistance > -EPSILON && newDistance < EPSILON) ||
             (oldDistance < EPSILON && newDistance > -EPSILON)
@@ -347,7 +289,7 @@ function rbdCollisionWithPlane (oldState, newState, planePoint, planeNormal) {
         collisionTimestep * oldStateVertices[i][1] + (1.0 - collisionTimestep) * newStateVertices[i][1],
         collisionTimestep * oldStateVertices[i][2] + (1.0 - collisionTimestep) * newStateVertices[i][2]
       )
-      // This is checking to see if the collision is within a face/tri, but since the plane is infinite it doesn't matter
+      // This is checking to see if the collision is within a face/tri, but since the plane is infinite we can skip
       // if (!isInTriangle(intersection, envboxTriangles[i].p0, envboxTriangles[i].p1, envboxTriangles[i].p2)) {
       //   continue
       // }
@@ -357,7 +299,6 @@ function rbdCollisionWithPlane (oldState, newState, planePoint, planeNormal) {
       }
     }
   }
-  // console.log(soonestCollisionTimestep);
   return [soonestCollisionTimestep, collisionPoint]
 }
 
@@ -385,16 +326,12 @@ function rbdCollisionResponse(state, stateDeriv, collisionPoint, planeNormal, m,
   const originalAVelocity = vec3.create()
   vec3.transformMat3(originalAVelocity, state.L, inertiaInverse)
 
-  // console.log(originalLVelocity, originalAVelocity)
-
   // vector from center of mass to collision point
   const rA = vec3.create()
   vec3.subtract(rA, collisionPoint, state.x)
 
   const pA = vec3.create()
   vec3.add(pA, pA, originalLVelocity)
-
-  // console.log(originalLVelocity)
 
   // cross product of rA and omega-A
   const rXw = vec3.create()
@@ -411,9 +348,7 @@ function rbdCollisionResponse(state, stateDeriv, collisionPoint, planeNormal, m,
 
   const vMinus = vec3.dot(pA, planeNormal)
 
-  let j = -(1 + restitutionCoeff) * vMinus / ((1.0 / m) + nDotThat)
-
-  // console.log(vMinus, nDotThat, j)
+  const j = -(1 + restitutionCoeff) * vMinus / ((1.0 / m) + nDotThat)
 
   const J = vec3.create()
   vec3.scale(J, planeNormal, j)
@@ -426,7 +361,5 @@ function rbdCollisionResponse(state, stateDeriv, collisionPoint, planeNormal, m,
   vec3.cross(deltaL, rA, J)
 
   vec3.add(newState.L, state.L, deltaL)
-  // console.log(j, J)
-  // console.log(state)
   return newState
 }
